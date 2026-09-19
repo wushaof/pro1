@@ -1,5 +1,6 @@
 <template>
-  <ModulePage title="产品准发预测" :desc="store.forecastMeta.goal">
+  <ModulePage title="准发与运力预测" :desc="store.forecastMeta.goal">
+    <SourcePanel board="fc-data" />
     <el-alert :title="store.forecastMeta.note" type="warning" :closable="false" show-icon class="mb" />
 
     <el-card shadow="never">
@@ -25,6 +26,19 @@
           </div>
         </el-col>
       </el-row>
+
+      <div class="ready-bars">
+        <div v-for="row in store.forecastList" :key="row.orderNo" class="ready-bar">
+          <span>{{ row.goods }}</span>
+          <el-progress
+            :percentage="row.planQty ? Math.min(100, Math.round((row.readyQty / row.planQty) * 100)) : 0"
+            :stroke-width="8"
+            :show-text="false"
+            color="#c41e3a"
+          />
+          <em>可发 {{ row.readyQty }} / 计划 {{ row.planQty }}</em>
+        </div>
+      </div>
 
       <el-table :data="store.forecastList" stripe>
         <el-table-column prop="orderNo" label="订单号" min-width="130" />
@@ -57,11 +71,12 @@
 import { computed } from 'vue'
 import ModulePage from '../../components/ModulePage.vue'
 import SourceChips from '../../components/SourceChips.vue'
+import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
 
 export default {
   name: 'DeliveryForecast',
-  components: { ModulePage, SourceChips },
+  components: { ModulePage, SourceChips, SourcePanel },
   setup() {
     const store = useLogisticsStore()
     const summary = computed(() => [
@@ -84,6 +99,17 @@ export default {
   display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
 }
 .stats { margin-bottom: 12px; }
+.ready-bars { margin-bottom: 14px; }
+.ready-bar {
+  display: grid;
+  grid-template-columns: 72px 1fr 150px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #606266;
+}
+.ready-bar em { font-style: normal; }
 .stat { padding: 12px; background: #f8fafc; border: 1px solid #e5eaf0; }
 .label { font-size: 12px; color: #909399; }
 .value { margin-top: 6px; font-size: 22px; font-weight: 700; color: #c41e3a; }

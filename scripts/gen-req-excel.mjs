@@ -1,134 +1,260 @@
-import { writeFileSync } from 'node:fs'
-import XLSX from 'xlsx'
-import { partA } from './req-part-a.mjs'
+import ExcelJS from 'exceljs'
 import { partB } from './req-part-b.mjs'
+import { partV15 } from './req-v15.mjs'
 
-const rows = [...partA, ...partB]
-rows.forEach((r, i) => {
-  r.seq = String(i + 1)
-})
+const support = partB.filter((r) => r.layer !== '核心业务')
+const all = [...partV15, ...support]
 
-const funcHeaders = [
+function buildMenus(rows) {
+  const map = new Map()
+  for (const r of rows) {
+    const key = `${r.layer}||${r.block}||${r.menu}`
+    if (!map.has(key)) {
+      map.set(key, {
+        layer: r.layer,
+        block: r.block,
+        menu: r.menu,
+        purpose: r.purpose,
+        funcs: [],
+      })
+    }
+    map.get(key).funcs.push(r)
+  }
+  return [...map.values()]
+}
+
+function uniqJoin(items, sep = '；') {
+  return [...new Set(items.filter(Boolean))].join(sep)
+}
+
+function buildDesc(m) {
+  const parts = [m.purpose, '']
+  m.funcs.forEach((f, i) => {
+    parts.push(`${i + 1}. ${f.name}：${f.desc}`)
+  })
+  parts.push('')
+  parts.push(`主要使用人：${uniqJoin(m.funcs.map((f) => f.role), '、')}。`)
+  parts.push(`数据主要来自：${uniqJoin(m.funcs.map((f) => f.src), '、')}。`)
+  return parts.join('\n')
+}
+
+function buildFlow(m) {
+  return m.funcs.map((f) => `【${f.name}】\n${f.flow}`).join('\n\n')
+}
+
+function buildRule(m) {
+  return uniqJoin(
+    m.funcs.map((f) => `【${f.name}】${f.rule}`),
+    '\n',
+  )
+}
+
+function buildUi(m) {
+  return uniqJoin(
+    m.funcs.map((f) => `【${f.name}】${f.ui}`),
+    '\n',
+  )
+}
+
+function buildEdge(m) {
+  return uniqJoin(
+    m.funcs.map((f) => `【${f.name}】${f.edge}`),
+    '\n',
+  )
+}
+
+function buildRef(m) {
+  return uniqJoin(
+    m.funcs.map((f) => f.ref),
+    '；',
+  )
+}
+
+function buildSrc(m) {
+  return uniqJoin(
+    m.funcs.map((f) => f.src),
+    '；',
+  )
+}
+
+function buildRole(m) {
+  return uniqJoin(
+    m.funcs.map((f) => f.role),
+    '、',
+  )
+}
+
+const headers = [
   '序号',
-  '架构层级',
-  '功能块',
-  '本块菜单数',
-  '菜单序号',
   '菜单名称',
-  '菜单要解决的问题',
-  '功能编号',
-  '功能名称',
-  '使用角色',
-  '功能说明',
-  '操作流程',
+  '功能描述',
   '业务规则',
+  '操作流程',
   '界面要点',
   '数据来源',
   '异常与边界',
   '依据',
+  '使用角色',
 ]
 
-const funcAoA = [
-  funcHeaders,
-  ...rows.map((r) => [
-    r.seq,
-    r.layer,
-    r.block,
-    r.menuCount,
-    r.menuIndex,
-    r.menu,
-    r.purpose,
-    r.funcNo,
-    r.name,
-    r.role,
-    r.desc,
-    r.flow,
-    r.rule,
-    r.ui,
-    r.src,
-    r.edge,
-    r.ref,
-  ]),
-]
+const colWidths = [6, 18, 176, 64, 64, 52, 52, 52, 44, 40]
 
-const menuMap = new Map()
-for (const r of rows) {
-  const key = `${r.layer}|${r.block}|${r.menu}`
-  if (!menuMap.has(key)) {
-    menuMap.set(key, {
-      layer: r.layer,
-      block: r.block,
-      menuCount: r.menuCount,
-      menuIndex: r.menuIndex,
-      menu: r.menu,
-      purpose: r.purpose,
-      funcs: [],
-    })
+const menus = buildMenus(all)
+
+function sheetName(block, used) {
+  let name = String(block).replace(/[\\/?*[\]:]/g, '').slice(0, 31)
+  if (!name) name = '未命名'
+  let out = name
+  let n = 2
+  while (used.has(out)) {
+    const suffix = `_${n}`
+    out = `${name.slice(0, 31 - suffix.length)}${suffix}`
+    n += 1
   }
-  menuMap.get(key).funcs.push(`${r.funcNo} ${r.name}`)
+  used.add(out)
+  return out
 }
 
-const menuHeaders = ['架构层级', '功能块', '本块菜单数', '菜单序号', '菜单名称', '菜单要解决的问题', '功能数', '功能清单']
-const menuAoA = [
-  menuHeaders,
-  ...[...menuMap.values()].map((m) => [
-    m.layer,
-    m.block,
-    m.menuCount,
-    m.menuIndex,
-    m.menu,
-    m.purpose,
-    String(m.funcs.length),
-    m.funcs.join('\n'),
-  ]),
+const blockOrder = []
+const byBlock = new Map()
+for (const m of menus) {
+  if (!byBlock.has(m.block)) {
+    byBlock.set(m.block, [])
+    blockOrder.push({ layer: m.layer, block: m.block })
+  }
+  byBlock.get(m.block).push(m)
+}
+
+const headerFill = {
+  type: 'pattern',
+  pattern: 'solid',
+  fgColor: { argb: 'FF1F2A37' },
+}
+const headerFont = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11, name: '微软雅黑' }
+const zebraOdd = {
+  type: 'pattern',
+  pattern: 'solid',
+  fgColor: { argb: 'FFFFFFFF' },
+}
+const zebraEven = {
+  type: 'pattern',
+  pattern: 'solid',
+  fgColor: { argb: 'FFF3F6FA' },
+}
+const thinBorder = {
+  top: { style: 'thin', color: { argb: 'FFD0D7DE' } },
+  left: { style: 'thin', color: { argb: 'FFD0D7DE' } },
+  bottom: { style: 'thin', color: { argb: 'FFD0D7DE' } },
+  right: { style: 'thin', color: { argb: 'FFD0D7DE' } },
+}
+const bodyFont = { name: '微软雅黑', size: 10, color: { argb: 'FF303133' } }
+
+function styleHeaderRow(row) {
+  row.height = 22
+  row.eachCell((cell) => {
+    cell.fill = headerFill
+    cell.font = headerFont
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+    cell.border = thinBorder
+  })
+}
+
+function styleDataRow(row, zebraIndex) {
+  const fill = zebraIndex % 2 === 0 ? zebraOdd : zebraEven
+  row.height = 176
+  row.eachCell({ includeEmpty: true }, (cell) => {
+    cell.fill = fill
+    cell.font = bodyFont
+    cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true }
+    cell.border = thinBorder
+  })
+}
+
+function applyColWidths(ws) {
+  colWidths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w
+  })
+}
+
+const wb = new ExcelJS.Workbook()
+wb.creator = 'angang'
+wb.created = new Date()
+
+const index = wb.addWorksheet('目录')
+index.columns = [
+  { header: '序号', width: 6 },
+  { header: '架构层级', width: 12 },
+  { header: '功能块', width: 22 },
+  { header: '菜单数', width: 8 },
+  { header: '对应工作表', width: 22 },
 ]
+styleHeaderRow(index.getRow(1))
 
-const blockCount = new Set(rows.map((r) => r.block)).size
-const menuCount = menuMap.size
+const usedNames = new Set(['目录'])
 
-const intro = [
-  ['鞍钢智慧物流 · 系统功能规划（PPT v1.3 第3页）需求说明'],
-  ['用途', '按第3页每一块拆成建议菜单，再写每个菜单下的实际功能，供需求评审和后续原型对照。图上标注为草稿待定，本文档同样可改。'],
-  ['怎么读', '先看“菜单规划”：一块有几个菜单、每个菜单解决什么问题。再看“功能需求”：每个功能的角色、说明、操作、规则、界面、来源和例外。同一菜单的功能编号形如 1.1、1.2。'],
-  ['统计', `功能块 ${blockCount} 个，菜单 ${menuCount} 个，功能 ${rows.length} 条。`],
-  ['口径', '销售物流系统即销售管理系统，负责计划量；物流运输系统负责作业执行和派车相关单据；德邻负责汽运运力执行。账面库存不等于可发量。汽运含直送、物流园外发、自提、集港；铁运覆盖长江以北；船运成品多走长江以南，港口分鞍钢营口港务和辽港。'],
-  ['未编造', '烽火台系统材料未展开，只列待调研。模型清单中的库位推荐、满载率、车型匹配均为待确认，文档中写成规则建议，不写成已上线的优化算法。热卷芯片耐温未验证，不写成已具备。'],
-  ['和上一版的差别', '上一版《功能描述》是一块一行的摘要。本文件是需求说明，一块对应多个菜单，一个菜单对应多条可评审的功能。'],
-  ['生成日期', '2026-09-19'],
-]
+blockOrder.forEach((b, i) => {
+  const name = sheetName(b.block, usedNames)
+  const list = byBlock.get(b.block)
 
-const wb = XLSX.utils.book_new()
-const ws0 = XLSX.utils.aoa_to_sheet(intro)
-ws0['!cols'] = [{ wch: 16 }, { wch: 140 }]
-XLSX.utils.book_append_sheet(wb, ws0, '说明')
+  const idxRow = index.addRow([i + 1, b.layer, b.block, list.length, name])
+  idxRow.height = 20
+  idxRow.eachCell((cell) => {
+    cell.font = bodyFont
+    cell.fill = i % 2 === 0 ? zebraOdd : zebraEven
+    cell.border = thinBorder
+    cell.alignment = { vertical: 'middle' }
+  })
 
-const ws1 = XLSX.utils.aoa_to_sheet(menuAoA)
-ws1['!cols'] = [
-  { wch: 12 }, { wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 24 },
-  { wch: 56 }, { wch: 8 }, { wch: 42 },
-]
-ws1['!autofilter'] = { ref: `A1:H${menuAoA.length}` }
-ws1['!freeze'] = { xSplit: 0, ySplit: 1 }
-ws1['!rows'] = menuAoA.map(() => ({ hpt: 48 }))
-XLSX.utils.book_append_sheet(wb, ws1, '菜单规划')
+  const ws = wb.addWorksheet(name, {
+    views: [{ state: 'frozen', xSplit: 2, ySplit: 1 }],
+  })
+  applyColWidths(ws)
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: headers.length },
+  }
 
-const ws2 = XLSX.utils.aoa_to_sheet(funcAoA)
-ws2['!cols'] = [
-  { wch: 6 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 10 },
-  { wch: 22 }, { wch: 40 }, { wch: 10 }, { wch: 28 }, { wch: 28 },
-  { wch: 72 }, { wch: 48 }, { wch: 48 }, { wch: 40 }, { wch: 32 },
-  { wch: 40 }, { wch: 32 },
-]
-ws2['!autofilter'] = { ref: `A1:Q${funcAoA.length}` }
-ws2['!freeze'] = { xSplit: 6, ySplit: 1 }
-ws2['!rows'] = funcAoA.map((_, i) => ({ hpt: i === 0 ? 22 : 72 }))
-XLSX.utils.book_append_sheet(wb, ws2, '功能需求')
+  const headerRow = ws.addRow(headers)
+  styleHeaderRow(headerRow)
+
+  list.forEach((m, j) => {
+    const data = [
+      j + 1,
+      m.menu,
+      buildDesc(m),
+      buildRule(m),
+      buildFlow(m),
+      buildUi(m),
+      buildSrc(m),
+      buildEdge(m),
+      buildRef(m),
+      buildRole(m),
+    ]
+    const row = ws.addRow(data)
+    styleDataRow(row, j)
+  })
+})
 
 const paths = [
   'd:/pro/angang/系统功能规划-第3页需求说明.xlsx',
   'd:/新建文件夹/系统功能规划-第3页需求说明.xlsx',
 ]
-for (const p of paths) {
-  writeFileSync(p, XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }))
-  console.log('wrote', p, 'funcs', rows.length, 'menus', menuCount, 'blocks', blockCount)
+
+async function main() {
+  for (const p of paths) {
+    try {
+      await wb.xlsx.writeFile(p)
+      console.log('wrote', p, 'sheets', wb.worksheets.length, 'menus', menus.length)
+    } catch (e) {
+      console.log('skip', p, e.code || e.message)
+      // 原文件被占用时写临时名，再提示
+      if (p.includes('angang') && !p.includes('新建')) {
+        const alt = 'd:/pro/angang/系统功能规划-第3页需求说明-覆盖中.xlsx'
+        await wb.xlsx.writeFile(alt)
+        console.log('wrote', alt, '(请关闭原文件后把此文件改名覆盖)')
+      }
+    }
+  }
 }
+
+await main()

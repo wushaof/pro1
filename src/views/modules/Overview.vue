@@ -1,7 +1,7 @@
 <template>
   <ModulePage
     title="业务全景"
-    desc="从原料进厂到成品外发的业务骨架，供需求梳理对照。点顶部菜单进入各专题原型。"
+    desc="从原料进厂到成品外发。"
   >
     <el-row :gutter="16">
       <el-col :lg="14" :xs="24">
@@ -40,12 +40,12 @@
       </el-col>
     </el-row>
 
-    <el-card shadow="never" class="mt" header="七项专题（点击进入）">
+    <el-card shadow="never" class="mt" header="功能块">
       <el-row :gutter="12">
-        <el-col :lg="8" :sm="12" :xs="24" v-for="m in modules" :key="m.path">
-          <div class="mod" @click="$router.push(m.path)">
-            <strong>{{ m.title }}</strong>
-            <p>{{ m.desc }}</p>
+        <el-col :lg="8" :sm="12" :xs="24" v-for="g in groups" :key="g.id">
+          <div class="mod" @click="$router.push(g.children[0].path)">
+            <strong>{{ g.title }}</strong>
+            <p>{{ g.desc }}</p>
           </div>
         </el-col>
       </el-row>
@@ -56,7 +56,7 @@
 <script>
 import ModulePage from '../../components/ModulePage.vue'
 import { logisticsChain } from '../../config/domain'
-import { moduleMenus } from '../../config/modules'
+import { navGroups } from '../../config/nav'
 
 export default {
   name: 'Overview',
@@ -64,7 +64,7 @@ export default {
   setup() {
     return {
       logisticsChain,
-      modules: moduleMenus.filter((m) => m.path !== '/overview'),
+      groups: navGroups.filter((g) => g.id !== 'overview'),
     }
   },
 }

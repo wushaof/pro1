@@ -1,5 +1,6 @@
 <template>
   <ModulePage title="码头智能调度" :desc="store.terminalMeta.goal">
+    <SourcePanel board="tm-data" />
     <el-card shadow="never">
       <template #header>
         <div class="card-header">
@@ -40,11 +41,12 @@
 <script>
 import ModulePage from '../../components/ModulePage.vue'
 import SourceChips from '../../components/SourceChips.vue'
+import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
 
 export default {
   name: 'TerminalDispatch',
-  components: { ModulePage, SourceChips },
+  components: { ModulePage, SourceChips, SourcePanel },
   setup() {
     const store = useLogisticsStore()
     const statusType = (v) =>

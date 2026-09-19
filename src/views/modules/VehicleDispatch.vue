@@ -1,5 +1,6 @@
 <template>
-  <ModulePage title="车辆智能调度" :desc="store.dispatchMeta.goal">
+  <ModulePage :title="pageTitle" :desc="store.dispatchMeta.goal">
+    <SourcePanel board="dp-data" />
     <el-row :gutter="12">
       <el-col :span="6" v-for="item in store.capacityPool" :key="item.label">
         <el-card shadow="never" class="stat-card">
@@ -87,19 +88,31 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ModulePage from '../../components/ModulePage.vue'
 import SourceChips from '../../components/SourceChips.vue'
+import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
 import { loadingPoints, scheduleHorizons } from '../../config/domain'
+import { findNavItem } from '../../config/nav'
 
 export default {
   name: 'VehicleDispatch',
-  components: { ModulePage, SourceChips },
+  components: { ModulePage, SourceChips, SourcePanel },
   setup() {
     const store = useLogisticsStore()
-    const tab = ref('gate')
-    const horizon = ref('当天滚动')
+    const route = useRoute()
+    const tabAlias = { workbench: 'match', pool: 'match', gate: 'gate', bay: 'bay' }
+    const tab = ref(tabAlias[route.params.tab] || 'match')
+    watch(
+      () => route.params.tab,
+      (value) => {
+        tab.value = tabAlias[value] || 'match'
+      },
+    )
+    const pageTitle = computed(() => findNavItem(route.path)?.item.title || '车辆智能调度')
+    const horizon = ref(route.params.tab === 'pool' ? '三天窗口' : '当天滚动')
 
     const loadPointsView = computed(() =>
       loadingPoints.map((p) => {
@@ -135,6 +148,7 @@ export default {
     return {
       store,
       tab,
+      pageTitle,
       horizon,
       scheduleHorizons,
       loadPointsView,

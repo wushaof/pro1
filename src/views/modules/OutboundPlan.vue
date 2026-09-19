@@ -1,5 +1,6 @@
 <template>
-  <ModulePage title="出厂计划智能编制" :desc="store.outboundMeta.goal">
+  <ModulePage :title="pageTitle" :desc="store.outboundMeta.goal">
+    <SourcePanel board="ob-data" />
     <el-tabs v-model="tab">
       <el-tab-pane label="出厂计划" name="plan">
         <el-card shadow="never">
@@ -33,7 +34,7 @@
         </el-card>
       </el-tab-pane>
 
-      <el-tab-pane label="多式联运为何如此排" name="why">
+      <el-tab-pane label="运输方式依据" name="why">
         <el-table :data="store.outboundRules.whyModes" stripe>
           <el-table-column prop="mode" label="方式" width="140" />
           <el-table-column prop="why" label="当前这样排的原因" />
@@ -70,20 +71,32 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ModulePage from '../../components/ModulePage.vue'
 import SourceChips from '../../components/SourceChips.vue'
+import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
+import { findNavItem } from '../../config/nav'
 
 export default {
   name: 'OutboundPlan',
-  components: { ModulePage, SourceChips },
+  components: { ModulePage, SourceChips, SourcePanel },
   setup() {
     const store = useLogisticsStore()
-    const tab = ref('plan')
+    const route = useRoute()
+    const allowed = ['plan', 'why', 'rule']
+    const tab = ref(allowed.includes(route.params.tab) ? route.params.tab : 'plan')
+    watch(
+      () => route.params.tab,
+      (value) => {
+        tab.value = allowed.includes(value) ? value : 'plan'
+      },
+    )
+    const pageTitle = computed(() => findNavItem(route.path)?.item.title || '出厂计划智能编制')
     const statusType = (v) =>
       ({ 待确认: 'warning', 已变更: 'danger', 已下发: 'success', 编制中: 'info' }[v] || 'info')
-    return { store, tab, statusType }
+    return { store, tab, pageTitle, statusType }
   },
 }
 </script>

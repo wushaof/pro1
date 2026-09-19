@@ -1,5 +1,6 @@
 <template>
-  <ModulePage title="车辆智能配载" :desc="store.loadingMeta.goal">
+  <ModulePage :title="pageTitle" :desc="store.loadingMeta.goal">
+    <SourcePanel board="ld-data" />
     <el-row :gutter="12" class="mb">
       <el-col :span="6" v-for="k in store.loadingMeta.kpis" :key="k.label">
         <div class="kpi">
@@ -30,9 +31,13 @@
             <el-table-column prop="vehicleLimit" label="限高限宽/标重" min-width="130" />
             <el-table-column prop="goods" label="装载明细" min-width="100" />
             <el-table-column prop="mixOk" label="混装规则" min-width="120" />
-            <el-table-column prop="fillRate" label="满载率" width="80">
+            <el-table-column prop="fillRate" label="满载率" width="140">
               <template #default="{ row }">
-                <span :class="{ low: row.fillRate < 75 }">{{ row.fillRate }}%</span>
+                <el-progress
+                  :percentage="row.fillRate"
+                  :stroke-width="8"
+                  :color="row.fillRate < 75 ? '#d97706' : '#c41e3a'"
+                />
               </template>
             </el-table-column>
             <el-table-column prop="gray" label="超限灰色地带" min-width="120" />
@@ -65,18 +70,30 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ModulePage from '../../components/ModulePage.vue'
 import SourceChips from '../../components/SourceChips.vue'
+import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
 import { mixForbidRules, vehicleLoadHabits } from '../../config/domain'
+import { findNavItem } from '../../config/nav'
 
 export default {
   name: 'VehicleLoading',
-  components: { ModulePage, SourceChips },
+  components: { ModulePage, SourceChips, SourcePanel },
   setup() {
     const store = useLogisticsStore()
-    const tab = ref('plan')
+    const route = useRoute()
+    const allowed = ['plan', 'mix', 'habit']
+    const tab = ref(allowed.includes(route.params.tab) ? route.params.tab : 'plan')
+    watch(
+      () => route.params.tab,
+      (value) => {
+        tab.value = allowed.includes(value) ? value : 'plan'
+      },
+    )
+    const pageTitle = computed(() => findNavItem(route.path)?.item.title || '车辆智能配载')
     const statusType = (v) =>
       ({
         待确认: 'warning',
@@ -84,7 +101,7 @@ export default {
         装车中: 'primary',
         请车兑现中: 'info',
       }[v] || 'info')
-    return { store, tab, mixForbidRules, vehicleLoadHabits, statusType }
+    return { store, tab, pageTitle, mixForbidRules, vehicleLoadHabits, statusType }
   },
 }
 </script>

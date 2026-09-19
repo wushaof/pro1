@@ -3,6 +3,7 @@
     title="全程可视化追踪"
     desc="按物料级主链贯通订货→排产→炼钢→轧制→入库→发运，点击下方阶段切换对应单据列表。"
   >
+    <SourcePanel board="track-api" />
     <div class="stage-bar">
       <div
         v-for="(stage, index) in store.trackingStages"
@@ -150,11 +151,12 @@
 <script>
 import { computed, ref, watch } from 'vue'
 import ModulePage from '../../components/ModulePage.vue'
+import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
 
 export default {
   name: 'Tracking',
-  components: { ModulePage },
+  components: { ModulePage, SourcePanel },
   setup() {
     const store = useLogisticsStore()
     const keyword = ref('')
