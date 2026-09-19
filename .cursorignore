@@ -1,0 +1,40 @@
+# Cursor 索引忽略配置 — 铁路物资采购评价系统
+
+# 依赖与构建产物
+**/node_modules/
+**/dist/
+**/build/
+**/target/
+**/.cache/
+
+# 日志与临时文件
+**/logs/
+**/*.log
+**/_extract_docs/
+
+# 版本控制与 IDE
+.git/
+.idea/
+**/*.iml
+
+# 环境与密钥（勿索引）
+**/.env
+**/.env.local
+**/.env.*.local
+
+# 大型二进制与办公文档
+**/*.docx
+**/*.doc
+**/*.xlsx
+**/*.zip
+**/*.jar
+**/*.pdf
+
+# 锁文件
+**/package-lock.json
+
+# 一次性生成脚本
+_generate_*.ps1
+_generate_*.mjs
+_ai_prep_content.html
+_build_scheme_doc.ps1
