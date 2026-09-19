@@ -131,7 +131,7 @@ export default {
   border-bottom: 2px solid transparent !important;
   height: 56px;
   line-height: 56px;
-  padding: 0 10px;
+  padding: 0 28px;
   font-size: 13px;
 }
 

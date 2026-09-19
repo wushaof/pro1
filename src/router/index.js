@@ -32,7 +32,7 @@ const routes = [
       { path: 'tracking', name: 'Tracking', component: Tracking, meta: { title: '全程可视化追踪' } },
       { path: 'cost-settle', name: 'CostSettle', component: CostSettle, meta: { title: '成本线上管理' } },
       { path: 'cost-analysis', name: 'CostAnalysis', component: CostAnalysis, meta: { title: '成本分析' } },
-      { path: 'delivery-forecast', name: 'DeliveryForecast', component: DeliveryForecast, meta: { title: '产品准发预测' } },
+      { path: 'delivery-forecast/:tab?', name: 'DeliveryForecast', component: DeliveryForecast, meta: { title: '产品准发预测' } },
       { path: 'vehicle-dispatch/:tab?', name: 'VehicleDispatch', component: VehicleDispatch, meta: { title: '车辆智能调度' } },
       { path: 'outbound-plan/:tab?', name: 'OutboundPlan', component: OutboundPlan, meta: { title: '出厂计划智能编制' } },
       { path: 'terminal-dispatch', name: 'TerminalDispatch', component: TerminalDispatch, meta: { title: '码头智能调度' } },

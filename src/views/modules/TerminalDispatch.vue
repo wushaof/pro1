@@ -6,7 +6,6 @@
         <div class="card-header">
           <div class="title-wrap">
             <span>码头作业看板</span>
-            <el-tag v-if="store.terminalMeta.surveyed" type="success" size="small">今日已调研</el-tag>
             <SourceChips :sources="store.terminalMeta.sources" />
           </div>
         </div>

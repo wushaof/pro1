@@ -1,6 +1,22 @@
 <template>
-  <ModulePage :title="pageTitle" :desc="store.dispatchMeta.goal">
+  <ModulePage :title="pageTitle" :desc="pageDesc">
     <SourcePanel board="dp-data" />
+
+    <template v-if="tab === 'pressure'">
+      <el-alert title="月初和月末按高压预留运力，月中按中压。高压库的已准发订单优先要车。这里只分级，不自动派车。" type="warning" :closable="false" show-icon />
+      <el-card shadow="never" header="库压力">
+        <div v-for="item in pressureRows" :key="item.wh" class="press">
+          <div>
+            <strong>{{ item.wh }}</strong>
+            <p>{{ item.why }}</p>
+          </div>
+          <el-tag :type="pressureType(item.level)" size="small">{{ item.level }}</el-tag>
+          <span>{{ item.action }}</span>
+        </div>
+      </el-card>
+    </template>
+
+    <template v-else>
     <el-row :gutter="12">
       <el-col :span="6" v-for="item in store.capacityPool" :key="item.label">
         <el-card shadow="never" class="stat-card">
@@ -84,6 +100,7 @@
         </el-card>
       </el-tab-pane>
     </el-tabs>
+    </template>
   </ModulePage>
 </template>
 
@@ -96,6 +113,7 @@ import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
 import { loadingPoints, scheduleHorizons } from '../../config/domain'
 import { findNavItem } from '../../config/nav'
+import { sheets } from '../../config/sheets'
 
 export default {
   name: 'VehicleDispatch',
@@ -103,7 +121,7 @@ export default {
   setup() {
     const store = useLogisticsStore()
     const route = useRoute()
-    const tabAlias = { workbench: 'match', pool: 'match', gate: 'gate', bay: 'bay' }
+    const tabAlias = { workbench: 'match', pool: 'match', gate: 'gate', bay: 'bay', pressure: 'pressure' }
     const tab = ref(tabAlias[route.params.tab] || 'match')
     watch(
       () => route.params.tab,
@@ -111,7 +129,14 @@ export default {
         tab.value = tabAlias[value] || 'match'
       },
     )
-    const pageTitle = computed(() => findNavItem(route.path)?.item.title || '车辆智能调度')
+    const pageTitle = computed(() => findNavItem(route.path)?.item.title || '运力池匹配')
+    const pageDesc = computed(() =>
+      tab.value === 'pressure'
+        ? '按可发、积压和预计入库给库分级。库容没维护的不判高压。可发低多半是混垛，不是没货。'
+        : '已用运力池替代微信派车。自有、长期、临时分开，自提不进运力池。调度确认后才派车。',
+    )
+    const pressureRows = sheets['dispatch-pressure'].rows
+    const pressureType = (value) => ({ 高压: 'danger', 关注: 'warning', 未分级: 'info' }[value] || 'info')
     const horizon = ref(route.params.tab === 'pool' ? '三天窗口' : '当天滚动')
 
     const loadPointsView = computed(() =>
@@ -155,6 +180,9 @@ export default {
       horizonDesc,
       filteredTasks,
       statusType,
+      pageDesc,
+      pressureRows,
+      pressureType,
     }
   },
 }
@@ -172,4 +200,18 @@ export default {
   display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
 }
 .horizon-desc { margin: 0 0 12px; font-size: 12px; color: #909399; }
+.press {
+  display: grid;
+  grid-template-columns: 1fr 72px 220px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+.press:last-child { border-bottom: none; }
+.press p { margin: 4px 0 0; color: #909399; font-size: 12px; }
+.press strong { color: #1f2a37; }
+@media (max-width: 900px) {
+  .press { grid-template-columns: 1fr; }
+}
 </style>

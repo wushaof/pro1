@@ -81,7 +81,7 @@ export const linkBoards = {
     ],
   },
   'fc-int': {
-    title: '算法集成',
+    title: '回写销售物流',
     desc: '预计准发时点和运力建议写回销售物流系统，不覆盖计划量。',
     target: '销售物流系统',
     checks: ['预计准发时点', '可发量', '运力建议', '不回写计划量'],
@@ -107,7 +107,7 @@ export const linkBoards = {
     ],
   },
   'dp-int': {
-    title: '算法集成',
+    title: '回写 PES',
     desc: '库压力和推荐车辆写入 PES。未确认的建议不会自动派车。',
     target: 'PES 系统',
     checks: ['库压力等级', '推荐车牌', '运力缺口', '调度确认后才执行'],
@@ -133,7 +133,7 @@ export const linkBoards = {
     ],
   },
   'ob-int': {
-    title: '算法集成',
+    title: '回写 PES',
     desc: '确认后的吨位、方式和顺序写入 PES。写失败不能当成库房已按新计划发货。',
     target: 'PES 系统',
     checks: ['计划吨位', '运输方式', '发车顺序', '仅已确认才写入'],
@@ -178,10 +178,10 @@ export const linkBoards = {
       { label: '规则未维护', value: '2', unit: '组' },
     ],
     systems: [
-      { name: '销售物流计划', status: '已到达', note: '流向、交期、吨位' },
-      { name: '列车调度', status: '部分到达', note: '车皮兑现' },
-      { name: '混装规则', status: '已配置', note: '热卷与冷卷等' },
-      { name: '历史满载', status: '参考', note: '优化模型尚未确认' },
+      { name: '发运计划', status: '已到达', note: '流向、交期、吨位' },
+      { name: '铁运车皮', status: '部分到达', note: '车皮兑现以列车调度为准' },
+      { name: '装载规则', status: '已配置', note: '混装、限高限宽、标重' },
+      { name: '历史装车', status: '已到达', note: '满载与等待时长' },
     ],
   },
   'ld-int': {

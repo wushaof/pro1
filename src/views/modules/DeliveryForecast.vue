@@ -1,9 +1,30 @@
 <template>
-  <ModulePage title="准发与运力预测" :desc="store.forecastMeta.goal">
+  <ModulePage :title="pageTitle" :desc="pageDesc">
     <SourcePanel board="fc-data" />
-    <el-alert :title="store.forecastMeta.note" type="warning" :closable="false" show-icon class="mb" />
+    <el-alert v-if="tab !== 'capacity'" :title="store.forecastMeta.note" type="warning" :closable="false" show-icon class="mb" />
+    <el-alert v-else title="热轧可装车日要加上约 24 小时冷却。未接入的产线不给出运力建议，也不计成零需求。" type="warning" :closable="false" show-icon class="mb" />
 
-    <el-card shadow="never">
+    <el-card v-if="tab === 'capacity'" shadow="never">
+      <template #header>
+        <div class="card-header">
+          <span>按排产预判运力</span>
+          <SourceChips :sources="store.forecastMeta.sources" />
+        </div>
+      </template>
+      <el-table :data="capacityRows" stripe>
+        <el-table-column prop="day" label="排产日期" width="100" />
+        <el-table-column prop="line" label="产线" width="110" />
+        <el-table-column prop="goods" label="品名" width="90" />
+        <el-table-column prop="inTon" label="预计入库(吨)" width="120" />
+        <el-table-column prop="readyDay" label="可装车日" width="110" />
+        <el-table-column prop="area" label="客户地区" width="110" />
+        <el-table-column prop="mode" label="建议方式" min-width="120" />
+        <el-table-column prop="need" label="建议运力" min-width="120" />
+        <el-table-column prop="trust" label="可信" width="120" />
+      </el-table>
+    </el-card>
+
+    <el-card v-else shadow="never">
       <template #header>
         <div class="card-header">
           <div class="title-wrap">
@@ -69,16 +90,28 @@
 
 <script>
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import ModulePage from '../../components/ModulePage.vue'
 import SourceChips from '../../components/SourceChips.vue'
 import SourcePanel from '../../components/SourcePanel.vue'
 import { useLogisticsStore } from '../../stores/logistics'
+import { sheets } from '../../config/sheets'
+import { findNavItem } from '../../config/nav'
 
 export default {
   name: 'DeliveryForecast',
   components: { ModulePage, SourceChips, SourcePanel },
   setup() {
     const store = useLogisticsStore()
+    const route = useRoute()
+    const tab = computed(() => (route.params.tab === 'capacity' ? 'capacity' : 'time'))
+    const pageTitle = computed(() => findNavItem(route.path)?.item.title || '批次准发时点')
+    const pageDesc = computed(() =>
+      tab.value === 'capacity'
+        ? '按销售订单和排产，把还没入库的货提前换成车次或车皮。长江以南倾向集港，长江以北走汽运或铁运。'
+        : store.forecastMeta.goal,
+    )
+    const capacityRows = sheets['forecast-cap'].rows
     const summary = computed(() => [
       { label: '计划量合计', value: store.forecastList.reduce((s, i) => s + i.planQty, 0) },
       { label: '可准发合计', value: store.forecastList.reduce((s, i) => s + i.readyQty, 0) },
@@ -88,7 +121,7 @@ export default {
     const confType = (v) => ({ 高: 'success', 中: 'warning', 低: 'info' }[v] || 'info')
     const statusType = (v) =>
       ({ 可准发: 'success', 条件待满足: 'warning', 预测中: 'primary', 不可准发: 'danger' }[v] || 'info')
-    return { store, summary, confType, statusType }
+    return { store, summary, confType, statusType, tab, pageTitle, pageDesc, capacityRows }
   },
 }
 </script>
